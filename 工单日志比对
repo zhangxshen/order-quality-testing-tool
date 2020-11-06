@@ -1,0 +1,131 @@
+import pandas as pd
+import datetime
+
+
+path_target = input("请输入文件路径： ")
+print("正在进行网管日志与工单对比，请稍候……")
+
+huawei = pd.read_excel(
+    path_target,
+    sheet_name='华为网管日志')
+zte = pd.read_excel(
+    path_target,
+    sheet_name='中兴网管日志')
+father_order = pd.read_excel(
+    path_target,
+    sheet_name='主单')
+son_order = pd.read_excel(
+    path_target,
+    sheet_name='工单子告警导出')
+
+sens_oper = ['告警清除', '设置全网告警预投入', '设置告警预投入', '告警反转']
+
+i = 0
+for j in huawei.itertuples():
+    oper_name = getattr(j, '操作名称')
+    if oper_name in sens_oper:
+        huawei.at[i, '是否敏感操作'] = '是'
+    else:
+        huawei.at[i, '是否敏感操作'] = '否'
+    i = i + 1
+
+i = 0
+for j in zte.itertuples():
+    oper_name = getattr(j, '命令功能')
+    if oper_name in sens_oper:
+        zte.at[i, '是否敏感操作'] = '是'
+    else:
+        zte.at[i, '是否敏感操作'] = '否'
+    i = i + 1
+
+pipei1 = pd.merge(huawei.loc[:, [
+    '操作名称', '是否敏感操作', '时间', '操作对象']],
+    father_order.loc[:, [
+        '工单编号', '网管告警消除时间', '网元名称'
+    ]],
+    left_on='操作对象',
+    right_on='网元名称')
+
+pipei2 = pd.merge(zte.loc[:, [
+    '命令功能', '是否敏感操作', '操作结束时间', '操作对象']],
+    father_order.loc[:, [
+        '工单编号', '网管告警消除时间', '网元名称']],
+    left_on='操作对象',
+    right_on='网元名称')
+
+pipei3 = pd.merge(huawei.loc[:, [
+    '操作名称', '是否敏感操作', '时间', '操作对象']],
+    son_order.loc[:, [
+        '工单编号', '子告警消除时间', '子告警网元名称']],
+    left_on='操作对象',
+    right_on='子告警网元名称')
+
+pipei4 = pd.merge(zte.loc[:, [
+    '命令功能', '是否敏感操作', '操作结束时间', '操作对象']],
+    son_order.loc[:, [
+        '工单编号', '子告警消除时间', '子告警网元名称']],
+    left_on='操作对象',
+    right_on='子告警网元名称')
+
+i = 0
+for j in pipei1.itertuples():
+    oper_time = getattr(j, '时间')
+    dis_time = getattr(j, '网管告警消除时间')
+    time_1_struct = datetime.datetime.strptime(oper_time, "%Y-%m-%d %H:%M:%S")
+    a = time_1_struct - dis_time
+    if abs(a.total_seconds()) < 300:
+        pipei1.at[i, '问题工单'] = '是'
+    else:
+        pipei1.at[i, '问题工单'] = '否'
+    i = i + 1
+
+i = 0
+for j in pipei2.itertuples():
+    oper_time = getattr(j, '操作结束时间')
+    dis_time = getattr(j, '网管告警消除时间')
+    a = oper_time - dis_time
+    if abs(a.total_seconds()) < 300:
+        pipei2.at[i, '问题工单'] = '是'
+    else:
+        pipei2.at[i, '问题工单'] = '否'
+    i = i + 1
+
+i = 0
+for j in pipei3.itertuples():
+    oper_time = getattr(j, '时间')
+    dis_time = getattr(j, '子告警消除时间')
+    time_1_struct = datetime.datetime.strptime(oper_time, "%Y-%m-%d %H:%M:%S")
+    a = time_1_struct - dis_time
+    if abs(a.total_seconds()) < 300:
+        pipei3.at[i, '问题工单'] = '是'
+    else:
+        pipei3.at[i, '问题工单'] = '否'
+    i = i + 1
+
+i = 0
+for j in pipei4.itertuples():
+    oper_time = getattr(j, '操作结束时间')
+    dis_time = getattr(j, '子告警消除时间')
+    a = oper_time - dis_time
+    if abs(a.total_seconds()) < 300:
+        pipei4.at[i, '问题工单'] = '是'
+    else:
+        pipei4.at[i, '问题工单'] = '否'
+    i = i + 1
+
+pipei1 = pipei1.drop_duplicates()
+pipei2 = pipei2.drop_duplicates()
+pipei3 = pipei3.drop_duplicates()
+pipei4 = pipei4.drop_duplicates()
+
+writer = pd.ExcelWriter('工单核查.xlsx')
+
+pipei1.to_excel(writer, "华为-主单", index=None)
+pipei2.to_excel(writer, "中兴-主单", index=None)
+pipei3.to_excel(writer, "华为-子单", index=None)
+pipei4.to_excel(writer, "中兴-子单", index=None)
+
+writer.save()
+
+print("比对完成！输出文件保存在程序相同路径下")
+input("请按任意键退出程序")
