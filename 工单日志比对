@@ -43,7 +43,7 @@ pipei1 = pd.merge(huawei.loc[:, [
     father_order.loc[:, [
         '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
         '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-        '故障发现时间', '预处理意见'
+        '故障发现时间', '申请报结操作时间', '预处理意见'
     ]],
     left_on='操作对象',
     right_on='网元名称')
@@ -81,6 +81,7 @@ pipei3 = pd.merge(pipei3,
                                     '网络分类三级',
                                     '故障发生时间',
                                     '故障发现时间',
+                                    '申请报结操作时间',
                                     '预处理意见']],
                   how='left',
                   left_on='工单编号',
@@ -94,6 +95,7 @@ pipei4 = pd.merge(pipei4,
                                     '网络分类三级',
                                     '故障发生时间',
                                     '故障发现时间',
+                                    '申请报结操作时间',
                                     '预处理意见']],
                   how='left',
                   left_on='工单编号',
@@ -103,9 +105,19 @@ i = 0
 for j in pipei1.itertuples():
     oper_time = getattr(j, '时间')
     dis_time = getattr(j, '网管告警消除时间')
+    apply_time = getattr(j, '申请报结操作时间')
     time_1_struct = datetime.datetime.strptime(oper_time, "%Y-%m-%d %H:%M:%S")
     a = time_1_struct - dis_time
+    b = time_1_struct - apply_time
     if abs(a.total_seconds()) < 300:
+        pipei1.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+    else:
+        pipei1.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '否'
+    if abs(b.total_seconds()) < 300:
+        pipei1.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
+    else:
+        pipei1.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
+    if abs(a.total_seconds()) < 300 and abs(b.total_seconds()) < 300:
         pipei1.at[i, '问题工单'] = '是'
     else:
         pipei1.at[i, '问题工单'] = '否'
@@ -115,8 +127,18 @@ i = 0
 for j in pipei2.itertuples():
     oper_time = getattr(j, '操作结束时间')
     dis_time = getattr(j, '网管告警消除时间')
+    apply_time = getattr(j, '申请报结操作时间')
     a = oper_time - dis_time
+    b = oper_time - apply_time
     if abs(a.total_seconds()) < 300:
+        pipei2.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+    else:
+        pipei2.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '否'
+    if abs(b.total_seconds()) < 300:
+        pipei2.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
+    else:
+        pipei2.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
+    if abs(a.total_seconds()) < 300 and abs(b.total_seconds()) < 300:
         pipei2.at[i, '问题工单'] = '是'
     else:
         pipei2.at[i, '问题工单'] = '否'
@@ -148,12 +170,14 @@ for j in pipei4.itertuples():
 order_1 = ['操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息', '工单编号',
            '问题工单', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
            '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-           '故障发现时间', '预处理意见']
+           '故障发现时间', '申请报结操作时间', '网管操作时间与告警消除时间相差小于五分钟', '网管操作时间与申请报结时间相差小于五分钟',
+           '预处理意见']
 
 order_2 = ['命令功能', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息', '工单编号',
            '问题工单', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
            '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-           '故障发现时间', '申请报结操作时间', '预处理意见']
+           '故障发现时间', '申请报结操作时间', '网管操作时间与告警消除时间相差小于五分钟', '网管操作时间与申请报结时间相差小于五分钟',
+           '预处理意见']
 
 order_3 = [
     '操作名称',
@@ -176,6 +200,7 @@ order_3 = [
     '网络分类三级',
     '故障发生时间',
     '故障发现时间',
+    '申请报结操作时间',
     '预处理意见']
 
 order_4 = [
@@ -199,24 +224,30 @@ order_4 = [
     '网络分类三级',
     '故障发生时间',
     '故障发现时间',
+    '申请报结操作时间',
     '预处理意见']
-
-pipei1 = pipei1[order_1]
-pipei2 = pipei2[order_2]
-pipei3 = pipei3[order_3]
-pipei4 = pipei4[order_4]
-
-pipei1 = pipei1.drop_duplicates()
-pipei2 = pipei2.drop_duplicates()
-pipei3 = pipei3.drop_duplicates()
-pipei4 = pipei4.drop_duplicates()
 
 writer = pd.ExcelWriter('工单核查.xlsx')
 
-pipei1.to_excel(writer, "华为-主单", index=None)
-pipei2.to_excel(writer, "中兴-主单", index=None)
-pipei3.to_excel(writer, "华为-子单", index=None)
-pipei4.to_excel(writer, "中兴-子单", index=None)
+if not pipei1.empty:
+    pipei1 = pipei1[order_1]
+    pipei1 = pipei1.drop_duplicates()
+    pipei1.to_excel(writer, "华为-主单", index=None)
+
+if not pipei2.empty:
+    pipei2 = pipei2[order_2]
+    pipei2 = pipei2.drop_duplicates()
+    pipei2.to_excel(writer, "中兴-主单", index=None)
+
+if not pipei3.empty:
+    pipei3 = pipei3[order_3]
+    pipei3 = pipei3.drop_duplicates()
+    pipei3.to_excel(writer, "华为-子单", index=None)
+
+if not pipei4.empty:
+    pipei4 = pipei4[order_4]
+    pipei4 = pipei4.drop_duplicates()
+    pipei4.to_excel(writer, "中兴-子单", index=None)
 
 writer.save()
 
