@@ -18,7 +18,8 @@ son_order = pd.read_excel(
     path_target,
     sheet_name='工单子告警导出')
 
-sens_oper = ['告警清除', '设置全网告警预投入', '设置告警预投入', '告警反转']
+sens_oper = ['告警清除', '设置全网告警预投入', '设置告警预投入', '告警反转', '设置物理端口的属性',
+             '设置网元的备用网关', '设置网元的主用网关']
 
 i = 0
 for j in huawei.itertuples():
@@ -148,9 +149,19 @@ i = 0
 for j in pipei3.itertuples():
     oper_time = getattr(j, '时间')
     dis_time = getattr(j, '子告警消除时间')
+    apply_time = getattr(j, '申请报结操作时间')
     time_1_struct = datetime.datetime.strptime(oper_time, "%Y-%m-%d %H:%M:%S")
     a = time_1_struct - dis_time
+    b = time_1_struct - apply_time
     if abs(a.total_seconds()) < 300:
+        pipei3.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+    else:
+        pipei3.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '否'
+    if abs(b.total_seconds()) < 300:
+        pipei3.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
+    else:
+        pipei3.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
+    if abs(a.total_seconds()) < 300 and abs(b.total_seconds()) < 300:
         pipei3.at[i, '问题工单'] = '是'
     else:
         pipei3.at[i, '问题工单'] = '否'
@@ -160,8 +171,18 @@ i = 0
 for j in pipei4.itertuples():
     oper_time = getattr(j, '操作结束时间')
     dis_time = getattr(j, '子告警消除时间')
+    apply_time = getattr(j, '申请报结操作时间')
     a = oper_time - dis_time
+    b = oper_time - apply_time
     if abs(a.total_seconds()) < 300:
+        pipei4.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+    else:
+        pipei4.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '否'
+    if abs(b.total_seconds()) < 300:
+        pipei4.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
+    else:
+        pipei4.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
+    if abs(a.total_seconds()) < 300 and abs(b.total_seconds()) < 300:
         pipei4.at[i, '问题工单'] = '是'
     else:
         pipei4.at[i, '问题工单'] = '否'
@@ -201,6 +222,8 @@ order_3 = [
     '故障发生时间',
     '故障发现时间',
     '申请报结操作时间',
+    '网管操作时间与告警消除时间相差小于五分钟',
+    '网管操作时间与申请报结时间相差小于五分钟',
     '预处理意见']
 
 order_4 = [
@@ -225,9 +248,20 @@ order_4 = [
     '故障发生时间',
     '故障发现时间',
     '申请报结操作时间',
+    '网管操作时间与告警消除时间相差小于五分钟',
+    '网管操作时间与申请报结时间相差小于五分钟',
     '预处理意见']
 
 writer = pd.ExcelWriter('工单核查.xlsx')
+
+pipei1 = pipei1[pipei1['问题工单'].isin(['是'])]
+pipei1 = pipei1.loc[pipei1['预处理意见'].str.contains('对端')]
+pipei2 = pipei2[pipei2['问题工单'].isin(['是'])]
+pipei2 = pipei2.loc[pipei2['预处理意见'].str.contains('对端')]
+pipei3 = pipei3[pipei3['问题工单'].isin(['是'])]
+pipei3 = pipei3.loc[pipei3['预处理意见'].str.contains('对端')]
+pipei4 = pipei4[pipei4['问题工单'].isin(['是'])]
+pipei4 = pipei4.loc[pipei4['预处理意见'].str.contains('对端')]
 
 if not pipei1.empty:
     pipei1 = pipei1[order_1]
@@ -237,7 +271,7 @@ if not pipei1.empty:
 if not pipei2.empty:
     pipei2 = pipei2[order_2]
     pipei2 = pipei2.drop_duplicates()
-    pipei2.to_excel(writer, "中兴-主单", index=None)
+    pipei2.to_excel(writer, "中兴-子单", index=None)
 
 if not pipei3.empty:
     pipei3 = pipei3[order_3]
