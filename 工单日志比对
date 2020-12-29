@@ -19,7 +19,7 @@ son_order = pd.read_excel(
     sheet_name='工单子告警导出')
 
 sens_oper = ['告警清除', '设置全网告警预投入', '设置告警预投入', '告警反转', '设置物理端口的属性',
-             '设置网元的备用网关', '设置网元的主用网关']
+             '设置网元的备用网关', '设置网元的主用网关', '修改网元', '设置']
 
 i = 0
 for j in huawei.itertuples():
@@ -30,14 +30,64 @@ for j in huawei.itertuples():
         huawei.at[i, '是否敏感操作'] = '否'
     i = i + 1
 
-i = 0
-for j in zte.itertuples():
-    oper_name = getattr(j, '命令功能')
-    if oper_name in sens_oper:
-        zte.at[i, '是否敏感操作'] = '是'
-    else:
-        zte.at[i, '是否敏感操作'] = '否'
-    i = i + 1
+if zte.columns.values[0] == '日志ID':
+    i = 0
+    for j in zte.itertuples():
+        oper_name = getattr(j, '操作')
+        d_message = getattr(j, '描述信息')
+        if oper_name == '设置' and d_message == '设置告警预投入':
+            zte.at[i, '是否敏感操作'] = '是'
+        if oper_name in sens_oper and oper_name != '设置':
+            zte.at[i, '是否敏感操作'] = '是'
+        else:
+            zte.at[i, '是否敏感操作'] = '否'
+        i = i + 1
+
+    pipei2 = pd.merge(zte.loc[:, [
+                                     '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
+                      father_order.loc[:, [
+                                              '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
+                                              '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
+                                              '故障发现时间', '申请报结操作时间', '预处理意见']],
+                      left_on='操作对象',
+                      right_on='网元名称')
+
+    pipei4 = pd.merge(zte.loc[:, [
+                                     '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
+                      son_order.loc[:, [
+                                           '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
+                                           '子告警业务状态', '自动审核业务状态']],
+                      left_on='操作对象',
+                      right_on='子告警网元名称')
+
+if zte.columns.values[0] == '用户名称':
+    i = 0
+    for j in zte.itertuples():
+        oper_name = getattr(j, '命令功能')
+        if oper_name in sens_oper:
+            zte.at[i, '是否敏感操作'] = '是'
+        else:
+            zte.at[i, '是否敏感操作'] = '否'
+        i = i + 1
+
+    pipei2 = pd.merge(zte.loc[:, [
+                                     '命令功能', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
+                      father_order.loc[:, [
+                                              '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
+                                              '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
+                                              '故障发现时间', '申请报结操作时间', '预处理意见']],
+                      left_on='操作对象',
+                      right_on='网元名称')
+
+    pipei4 = pd.merge(zte.loc[:, [
+                                     '命令功能', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
+                      son_order.loc[:, [
+                                           '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
+                                           '子告警业务状态', '自动审核业务状态']],
+                      left_on='操作对象',
+                      right_on='子告警网元名称')
+
+
 
 pipei1 = pd.merge(huawei.loc[:, [
     '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
@@ -49,25 +99,8 @@ pipei1 = pd.merge(huawei.loc[:, [
     left_on='操作对象',
     right_on='网元名称')
 
-pipei2 = pd.merge(zte.loc[:, [
-    '命令功能', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-    father_order.loc[:, [
-        '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
-        '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-        '故障发现时间', '申请报结操作时间', '预处理意见']],
-    left_on='操作对象',
-    right_on='网元名称')
-
 pipei3 = pd.merge(huawei.loc[:, [
     '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
-    son_order.loc[:, [
-        '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
-        '子告警业务状态', '自动审核业务状态']],
-    left_on='操作对象',
-    right_on='子告警网元名称')
-
-pipei4 = pd.merge(zte.loc[:, [
-    '命令功能', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
     son_order.loc[:, [
         '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
         '子告警业务状态', '自动审核业务状态']],
@@ -118,7 +151,7 @@ for j in pipei1.itertuples():
         pipei1.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
     else:
         pipei1.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-    if abs(a.total_seconds()) < 300 and abs(b.total_seconds()) < 300:
+    if abs(a.total_seconds()) < 300:
         pipei1.at[i, '问题工单'] = '是'
     else:
         pipei1.at[i, '问题工单'] = '否'
@@ -139,7 +172,7 @@ for j in pipei2.itertuples():
         pipei2.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
     else:
         pipei2.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-    if abs(a.total_seconds()) < 300 and abs(b.total_seconds()) < 300:
+    if abs(a.total_seconds()) < 300:
         pipei2.at[i, '问题工单'] = '是'
     else:
         pipei2.at[i, '问题工单'] = '否'
@@ -161,7 +194,7 @@ for j in pipei3.itertuples():
         pipei3.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
     else:
         pipei3.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-    if abs(a.total_seconds()) < 300 and abs(b.total_seconds()) < 300:
+    if abs(a.total_seconds()) < 300:
         pipei3.at[i, '问题工单'] = '是'
     else:
         pipei3.at[i, '问题工单'] = '否'
@@ -182,7 +215,7 @@ for j in pipei4.itertuples():
         pipei4.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
     else:
         pipei4.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-    if abs(a.total_seconds()) < 300 and abs(b.total_seconds()) < 300:
+    if abs(a.total_seconds()) < 300:
         pipei4.at[i, '问题工单'] = '是'
     else:
         pipei4.at[i, '问题工单'] = '否'
@@ -254,31 +287,39 @@ order_4 = [
 
 writer = pd.ExcelWriter('工单核查.xlsx')
 
-pipei1 = pipei1[pipei1['问题工单'].isin(['是'])]
-pipei1 = pipei1.loc[pipei1['预处理意见'].str.contains('对端')]
-pipei2 = pipei2[pipei2['问题工单'].isin(['是'])]
-pipei2 = pipei2.loc[pipei2['预处理意见'].str.contains('对端')]
-pipei3 = pipei3[pipei3['问题工单'].isin(['是'])]
-pipei3 = pipei3.loc[pipei3['预处理意见'].str.contains('对端')]
-pipei4 = pipei4[pipei4['问题工单'].isin(['是'])]
-pipei4 = pipei4.loc[pipei4['预处理意见'].str.contains('对端')]
+
+
+
+
 
 if not pipei1.empty:
+    pipei1 = pipei1[pipei1['问题工单'].isin(['是'])]
+    pipei1['预处理意见'] = pipei1['预处理意见'].apply(str)
+    pipei1 = pipei1.loc[pipei1['预处理意见'].str.contains('对端')]
     pipei1 = pipei1[order_1]
     pipei1 = pipei1.drop_duplicates()
     pipei1.to_excel(writer, "华为-主单", index=None)
 
 if not pipei2.empty:
+    pipei2 = pipei2[pipei2['问题工单'].isin(['是'])]
+    pipei2['预处理意见'] = pipei2['预处理意见'].apply(str)
+    pipei2 = pipei2.loc[pipei2['预处理意见'].str.contains('对端')]
     pipei2 = pipei2[order_2]
     pipei2 = pipei2.drop_duplicates()
     pipei2.to_excel(writer, "中兴-子单", index=None)
 
 if not pipei3.empty:
+    pipei3 = pipei3[pipei3['问题工单'].isin(['是'])]
+    pipei3['预处理意见'] = pipei3['预处理意见'].apply(str)
+    pipei3 = pipei3.loc[pipei3['预处理意见'].str.contains('对端')]
     pipei3 = pipei3[order_3]
     pipei3 = pipei3.drop_duplicates()
     pipei3.to_excel(writer, "华为-子单", index=None)
 
 if not pipei4.empty:
+    pipei4 = pipei4[pipei4['问题工单'].isin(['是'])]
+    pipei4['预处理意见'] = pipei4['预处理意见'].apply(str)
+    pipei4 = pipei4.loc[pipei4['预处理意见'].str.contains('对端')]
     pipei4 = pipei4[order_4]
     pipei4 = pipei4.drop_duplicates()
     pipei4.to_excel(writer, "中兴-子单", index=None)
