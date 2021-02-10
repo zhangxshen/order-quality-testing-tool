@@ -1,5 +1,4 @@
 import pandas as pd
-import datetime
 
 
 path_target = input("请输入文件路径： ")
@@ -9,23 +8,42 @@ huawei = pd.read_excel(
     path_target,
     usecols=['操作名称', '操作用户', '时间', '操作对象', '详细信息'],
     sheet_name='华为网管日志')
+
 zte = pd.read_excel(
     path_target,
-    usecols=[
-        '命令功能', '用户名称', '操作结束时间', '操作对象', '详细信息'],
     sheet_name='中兴网管日志')
+if zte.columns.values[0] == '用户名称':
+    zte = zte.rename(columns={'命令功能': '操作'})
+
 father_order = pd.read_excel(
     path_target,
     usecols=['工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
              '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
              '故障发现时间', '申请报结操作时间', '预处理意见'],
     sheet_name='主单')
+
 son_order = pd.read_excel(
     path_target,
     usecols=[
         '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
         '子告警业务状态', '自动审核业务状态'],
     sheet_name='工单子告警导出')
+
+# 去掉日期字段可能存在的空格字符串
+huawei['时间'] = huawei['时间'].map(str.strip)
+
+# 将需要用来匹配的字段都转成float，避免两个字段类型不同无法匹配
+zte["操作对象"] = pd.to_numeric(zte["操作对象"], errors='coerce')
+huawei["操作对象"] = pd.to_numeric(huawei["操作对象"], errors='coerce')
+father_order["网元名称"] = pd.to_numeric(father_order["网元名称"], errors='coerce')
+son_order["子告警网元名称"] = pd.to_numeric(son_order["子告警网元名称"], errors='coerce')
+
+# 日期全部转换为datetime格式
+zte["操作结束时间"] = pd.to_datetime(zte["操作结束时间"], errors='coerce')
+huawei["时间"] = pd.to_datetime(huawei["时间"], errors='coerce')
+father_order["网管告警消除时间"] = pd.to_datetime(father_order["网管告警消除时间"], errors='coerce')
+father_order["申请报结操作时间"] = pd.to_datetime(father_order["申请报结操作时间"], errors='coerce')
+son_order["子告警消除时间"] = pd.to_datetime(son_order["子告警消除时间"], errors='coerce')
 
 sens_oper = ['告警清除', '设置全网告警预投入', '设置告警预投入', '告警反转', '设置物理端口的属性',
              '设置网元的备用网关', '设置网元的主用网关', '修改网元', '设置']
@@ -39,63 +57,16 @@ for j in huawei.itertuples():
         huawei.at[i, '是否敏感操作'] = '否'
     i = i + 1
 
-if zte.columns.values[0] == '日志ID':
+if zte.columns.values[0] == '用户名称':
+    zte = zte.rename(columns={'命令功能': '操作'})
     i = 0
     for j in zte.itertuples():
         oper_name = getattr(j, '操作')
-        d_message = getattr(j, '描述信息')
-        if oper_name == '设置' and d_message == '设置告警预投入':
-            zte.at[i, '是否敏感操作'] = '是'
-        if oper_name in sens_oper and oper_name != '设置':
-            zte.at[i, '是否敏感操作'] = '是'
-        else:
-            zte.at[i, '是否敏感操作'] = '否'
-        i = i + 1
-
-    pipei2 = pd.merge(zte.loc[:, [
-        '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-        father_order.loc[:, [
-            '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
-            '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-            '故障发现时间', '申请报结操作时间', '预处理意见']],
-        left_on='操作对象',
-        right_on='网元名称')
-
-    pipei4 = pd.merge(zte.loc[:, [
-        '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-        son_order.loc[:, [
-            '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
-            '子告警业务状态', '自动审核业务状态']],
-        left_on='操作对象',
-        right_on='子告警网元名称')
-
-if zte.columns.values[0] == '用户名称':
-    i = 0
-    for j in zte.itertuples():
-        oper_name = getattr(j, '命令功能')
         if oper_name in sens_oper:
             zte.at[i, '是否敏感操作'] = '是'
         else:
             zte.at[i, '是否敏感操作'] = '否'
         i = i + 1
-
-    pipei2 = pd.merge(zte.loc[:, [
-        '命令功能', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-        father_order.loc[:, [
-            '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
-            '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-            '故障发现时间', '申请报结操作时间', '预处理意见']],
-        left_on='操作对象',
-        right_on='网元名称')
-
-    pipei4 = pd.merge(zte.loc[:, [
-        '命令功能', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-        son_order.loc[:, [
-            '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
-            '子告警业务状态', '自动审核业务状态']],
-        left_on='操作对象',
-        right_on='子告警网元名称')
-
 
 pipei1 = pd.merge(huawei.loc[:, [
     '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
@@ -106,6 +77,15 @@ pipei1 = pd.merge(huawei.loc[:, [
     ]],
     left_on='操作对象',
     right_on='网元名称')
+
+pipei2 = pd.merge(zte.loc[:, [
+        '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
+        father_order.loc[:, [
+            '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
+            '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
+            '故障发现时间', '申请报结操作时间', '预处理意见']],
+        left_on='操作对象',
+        right_on='网元名称')
 
 pipei3 = pd.merge(huawei.loc[:, [
     '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
@@ -129,6 +109,14 @@ pipei3 = pd.merge(pipei3,
                   left_on='工单编号',
                   right_on='工单编号')
 
+pipei4 = pd.merge(zte.loc[:, [
+        '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
+        son_order.loc[:, [
+            '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
+            '子告警业务状态', '自动审核业务状态']],
+        left_on='操作对象',
+        right_on='子告警网元名称')
+
 pipei4 = pd.merge(pipei4,
                   father_order.loc[:,
                                    ['工单编号',
@@ -148,9 +136,8 @@ for j in pipei1.itertuples():
     oper_time = getattr(j, '时间')
     dis_time = getattr(j, '网管告警消除时间')
     apply_time = getattr(j, '申请报结操作时间')
-    time_1_struct = datetime.datetime.strptime(oper_time, "%Y-%m-%d %H:%M:%S")
-    a = time_1_struct - dis_time
-    b = time_1_struct - apply_time
+    a = oper_time - dis_time
+    b = oper_time - apply_time
     if abs(a.total_seconds()) < 300:
         pipei1.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
     else:
@@ -191,9 +178,8 @@ for j in pipei3.itertuples():
     oper_time = getattr(j, '时间')
     dis_time = getattr(j, '子告警消除时间')
     apply_time = getattr(j, '申请报结操作时间')
-    time_1_struct = datetime.datetime.strptime(oper_time, "%Y-%m-%d %H:%M:%S")
-    a = time_1_struct - dis_time
-    b = time_1_struct - apply_time
+    a = oper_time - dis_time
+    b = oper_time - apply_time
     if abs(a.total_seconds()) < 300:
         pipei3.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
     else:
@@ -256,7 +242,7 @@ order_1 = [
     '预处理意见']
 
 order_2 = [
-    '命令功能',
+    '操作',
     '是否敏感操作',
     '用户名称',
     '操作结束时间',
@@ -308,7 +294,7 @@ order_3 = [
     '预处理意见']
 
 order_4 = [
-    '命令功能',
+    '操作',
     '是否敏感操作',
     '用户名称',
     '操作结束时间',
