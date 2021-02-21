@@ -57,16 +57,14 @@ for j in huawei.itertuples():
         huawei.at[i, '是否敏感操作'] = '否'
     i = i + 1
 
-if zte.columns.values[0] == '用户名称':
-    zte = zte.rename(columns={'命令功能': '操作'})
-    i = 0
-    for j in zte.itertuples():
-        oper_name = getattr(j, '操作')
-        if oper_name in sens_oper:
-            zte.at[i, '是否敏感操作'] = '是'
-        else:
-            zte.at[i, '是否敏感操作'] = '否'
-        i = i + 1
+i = 0
+for j in zte.itertuples():
+    oper_name = getattr(j, '操作')
+    if oper_name in sens_oper:
+        zte.at[i, '是否敏感操作'] = '是'
+    else:
+        zte.at[i, '是否敏感操作'] = '否'
+    i = i + 1
 
 pipei1 = pd.merge(huawei.loc[:, [
     '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
