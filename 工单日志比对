@@ -109,27 +109,19 @@ pipei1 = pd.merge(huawei.loc[:, [
     right_on='网元名称')
 
 pipei2 = pd.merge(zte.loc[:, [
-        '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-        father_order.loc[:, [
-            '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
-            '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-            '故障发现时间', '申请报结操作时间', '预处理意见']],
-        left_on='操作对象',
-        right_on='网元名称')
+    '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
+    father_order.loc[:, [
+        '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
+        '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
+        '故障发现时间', '申请报结操作时间', '预处理意见']],
+    left_on='操作对象',
+    right_on='网元名称')
 
 pipei3 = pd.merge(huawei.loc[:, [
     '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
     son_order,
     left_on='操作对象',
     right_on='子告警网元名称')
-
-for col in pipei3.columns:
-    num_unique_values = len(pipei3[col].unique())
-    num_total_values = len(pipei3[col])
-    if num_unique_values / num_total_values < 0.5:
-        pipei3.loc[:, col] = pipei3[col].astype('category')
-    else:
-        pipei3.loc[:, col] = pipei3[col]
 
 pipei3 = pd.merge(pipei3,
                   father_order.loc[:,
@@ -146,18 +138,10 @@ pipei3 = pd.merge(pipei3,
                   right_on='工单编号')
 
 pipei4 = pd.merge(zte.loc[:, [
-        '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-        son_order,
-        left_on='操作对象',
-        right_on='子告警网元名称')
-
-for col in pipei4.columns:
-    num_unique_values = len(pipei4[col].unique())
-    num_total_values = len(pipei4[col])
-    if num_unique_values / num_total_values < 0.5:
-        pipei4.loc[:, col] = pipei4[col].astype('category')
-    else:
-        pipei4.loc[:, col] = pipei4[col]
+    '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
+    son_order,
+    left_on='操作对象',
+    right_on='子告警网元名称')
 
 pipei4 = pd.merge(pipei4,
                   father_order.loc[:,
@@ -184,9 +168,8 @@ for col in ['操作结束时间', '网管告警消除时间', '申请报结操�
 for col in ['时间', '子告警消除时间', '申请报结操作时间']:
     pipei3[col] = pd.to_datetime(pipei3[col], errors='coerce')
 
-pipei4['操作结束时间'] = pd.to_datetime(pipei4['操作结束时间'], errors='coerce')
-pipei4['子告警消除时间'] = pd.to_datetime(pipei4['子告警消除时间'], errors='coerce')
-pipei4['申请报结操作时间'] = pd.to_datetime(pipei4['申请报结操作时间'], errors='coerce')
+for col in ['操作结束时间', '子告警消除时间', '申请报结操作时间']:
+    pipei4[col] = pd.to_datetime(pipei4[col], errors='coerce')
 
 i = 0
 for j in pipei1.itertuples():
@@ -381,7 +364,7 @@ if not pipei2.empty:
     pipei2 = pipei2[pipei2['问题工单'].isin(['是'])]
     pipei2 = pipei2[order_2]
     pipei2 = pipei2.drop_duplicates()
-    pipei2.to_excel(writer, "中兴-子单", index=None)
+    pipei2.to_excel(writer, "中兴-主单", index=None)
 
 if not pipei3.empty:
     pipei3 = pipei3[pipei3['问题工单'].isin(['是'])]
