@@ -8,11 +8,16 @@ huawei = pd.read_excel(
     path_target,
     usecols=['操作名称', '操作用户', '时间', '操作对象', '详细信息'],
     sheet_name='华为网管日志')
+huawei = huawei.dropna(axis=0, subset=["操作对象"])
 
 zte = pd.read_excel(
     path_target,
+    usecols=[
+        '命令功能', '操作', '用户名称', '操作结束时间', '操作对象', '详细信息'],
     sheet_name='中兴网管日志')
+zte = zte.dropna(axis=0, subset=["操作对象"])
 if zte.columns.values[0] == '用户名称':
+    zte = zte.drop('操作', axis=1)
     zte = zte.rename(columns={'命令功能': '操作'})
 
 father_order = pd.read_excel(
@@ -21,6 +26,9 @@ father_order = pd.read_excel(
              '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
              '故障发现时间', '申请报结操作时间', '预处理意见'],
     sheet_name='主单')
+father_order['预处理意见'] = father_order['预处理意见'].apply(str)
+father_order = father_order.loc[father_order['预处理意见'].str.contains('对端')]
+father_order = father_order.dropna(axis=0, subset=["网元名称"])
 
 son_order = pd.read_excel(
     path_target,
@@ -28,43 +36,67 @@ son_order = pd.read_excel(
         '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
         '子告警业务状态', '自动审核业务状态'],
     sheet_name='工单子告警导出')
+son_order = son_order.dropna(axis=0, subset=["子告警网元名称"])
+
+huawei = huawei.drop_duplicates()
+zte = zte.drop_duplicates()
+father_order = father_order.drop_duplicates()
+son_order = son_order.drop_duplicates()
 
 # 去掉日期字段可能存在的空格字符串
 huawei['时间'] = huawei['时间'].map(str.strip)
 
-# 将需要用来匹配的字段都转成float，避免两个字段类型不同无法匹配
-zte["操作对象"] = pd.to_numeric(zte["操作对象"], errors='coerce')
-huawei["操作对象"] = pd.to_numeric(huawei["操作对象"], errors='coerce')
-father_order["网元名称"] = pd.to_numeric(father_order["网元名称"], errors='coerce')
-son_order["子告警网元名称"] = pd.to_numeric(son_order["子告警网元名称"], errors='coerce')
-
-# 日期全部转换为datetime格式
-zte["操作结束时间"] = pd.to_datetime(zte["操作结束时间"], errors='coerce')
-huawei["时间"] = pd.to_datetime(huawei["时间"], errors='coerce')
-father_order["网管告警消除时间"] = pd.to_datetime(father_order["网管告警消除时间"], errors='coerce')
-father_order["申请报结操作时间"] = pd.to_datetime(father_order["申请报结操作时间"], errors='coerce')
-son_order["子告警消除时间"] = pd.to_datetime(son_order["子告警消除时间"], errors='coerce')
-
 sens_oper = ['告警清除', '设置全网告警预投入', '设置告警预投入', '告警反转', '设置物理端口的属性',
              '设置网元的备用网关', '设置网元的主用网关', '修改网元', '设置']
 
-i = 0
-for j in huawei.itertuples():
-    oper_name = getattr(j, '操作名称')
-    if oper_name in sens_oper:
-        huawei.at[i, '是否敏感操作'] = '是'
-    else:
-        huawei.at[i, '是否敏感操作'] = '否'
-    i = i + 1
 
-i = 0
-for j in zte.itertuples():
-    oper_name = getattr(j, '操作')
-    if oper_name in sens_oper:
-        zte.at[i, '是否敏感操作'] = '是'
+def hw_sens_oper(x):
+    if x["操作名称"] in sens_oper:
+        return '是'
+
+
+def zte_sens_oper(x):
+    if x["操作"] in sens_oper:
+        return '是'
+
+
+huawei.loc[:, "是否敏感操作"] = huawei.apply(hw_sens_oper, axis=1)
+zte.loc[:, "是否敏感操作"] = zte.apply(zte_sens_oper, axis=1)
+
+for col in huawei.columns:
+    num_unique_values = len(huawei[col].unique())
+    num_total_values = len(huawei[col])
+    if num_unique_values / num_total_values < 0.5:
+        huawei.loc[:, col] = huawei[col].astype('category')
     else:
-        zte.at[i, '是否敏感操作'] = '否'
-    i = i + 1
+        huawei.loc[:, col] = huawei[col]
+
+for col in zte.columns:
+    num_unique_values = len(zte[col].unique())
+    num_total_values = len(zte[col])
+    if num_unique_values / num_total_values < 0.5:
+        zte.loc[:, col] = zte[col].astype('category')
+    else:
+        zte.loc[:, col] = zte[col]
+
+for col in father_order.columns:
+    num_unique_values = len(father_order[col].unique())
+    num_total_values = len(father_order[col])
+    if num_unique_values / num_total_values < 0.5:
+        father_order.loc[:, col] = father_order[col].astype('category')
+    else:
+        father_order.loc[:, col] = father_order[col]
+
+for col in son_order.columns:
+    num_unique_values = len(son_order[col].unique())
+    num_total_values = len(son_order[col])
+    if num_unique_values / num_total_values < 0.5:
+        son_order.loc[:, col] = son_order[col].astype('category')
+    else:
+        son_order.loc[:, col] = son_order[col]
+
+huawei.loc[:, '操作对象'] = huawei['操作对象'].astype('category')
+zte.loc[:, '操作对象'] = zte['操作对象'].astype('category')
 
 pipei1 = pd.merge(huawei.loc[:, [
     '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
@@ -87,11 +119,17 @@ pipei2 = pd.merge(zte.loc[:, [
 
 pipei3 = pd.merge(huawei.loc[:, [
     '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
-    son_order.loc[:, [
-        '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
-        '子告警业务状态', '自动审核业务状态']],
+    son_order,
     left_on='操作对象',
     right_on='子告警网元名称')
+
+for col in pipei3.columns:
+    num_unique_values = len(pipei3[col].unique())
+    num_total_values = len(pipei3[col])
+    if num_unique_values / num_total_values < 0.5:
+        pipei3.loc[:, col] = pipei3[col].astype('category')
+    else:
+        pipei3.loc[:, col] = pipei3[col]
 
 pipei3 = pd.merge(pipei3,
                   father_order.loc[:,
@@ -109,11 +147,17 @@ pipei3 = pd.merge(pipei3,
 
 pipei4 = pd.merge(zte.loc[:, [
         '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-        son_order.loc[:, [
-            '工单编号', '故障发生地市', '子告警消除时间', '子告警网元名称', '子告警定位对象', '子告警标准名',
-            '子告警业务状态', '自动审核业务状态']],
+        son_order,
         left_on='操作对象',
         right_on='子告警网元名称')
+
+for col in pipei4.columns:
+    num_unique_values = len(pipei4[col].unique())
+    num_total_values = len(pipei4[col])
+    if num_unique_values / num_total_values < 0.5:
+        pipei4.loc[:, col] = pipei4[col].astype('category')
+    else:
+        pipei4.loc[:, col] = pipei4[col]
 
 pipei4 = pd.merge(pipei4,
                   father_order.loc[:,
@@ -129,6 +173,21 @@ pipei4 = pd.merge(pipei4,
                   left_on='工单编号',
                   right_on='工单编号')
 
+
+# 日期全部转换为datetime格式
+for col in ['时间', '网管告警消除时间', '申请报结操作时间']:
+    pipei1[col] = pd.to_datetime(pipei1[col], errors='coerce')
+
+for col in ['操作结束时间', '网管告警消除时间', '申请报结操作时间']:
+    pipei2[col] = pd.to_datetime(pipei2[col], errors='coerce')
+
+for col in ['时间', '子告警消除时间', '申请报结操作时间']:
+    pipei3[col] = pd.to_datetime(pipei3[col], errors='coerce')
+
+pipei4['操作结束时间'] = pd.to_datetime(pipei4['操作结束时间'], errors='coerce')
+pipei4['子告警消除时间'] = pd.to_datetime(pipei4['子告警消除时间'], errors='coerce')
+pipei4['申请报结操作时间'] = pd.to_datetime(pipei4['申请报结操作时间'], errors='coerce')
+
 i = 0
 for j in pipei1.itertuples():
     oper_time = getattr(j, '时间')
@@ -138,16 +197,14 @@ for j in pipei1.itertuples():
     b = oper_time - apply_time
     if abs(a.total_seconds()) < 300:
         pipei1.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+        pipei1.at[i, '问题工单'] = '是'
     else:
         pipei1.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '否'
+        pipei1.at[i, '问题工单'] = '否'
     if abs(b.total_seconds()) < 300:
         pipei1.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
     else:
         pipei1.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-    if abs(a.total_seconds()) < 300:
-        pipei1.at[i, '问题工单'] = '是'
-    else:
-        pipei1.at[i, '问题工单'] = '否'
     i = i + 1
 
 i = 0
@@ -159,16 +216,14 @@ for j in pipei2.itertuples():
     b = oper_time - apply_time
     if abs(a.total_seconds()) < 300:
         pipei2.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+        pipei2.at[i, '问题工单'] = '是'
     else:
         pipei2.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '否'
+        pipei2.at[i, '问题工单'] = '否'
     if abs(b.total_seconds()) < 300:
         pipei2.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
     else:
         pipei2.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-    if abs(a.total_seconds()) < 300:
-        pipei2.at[i, '问题工单'] = '是'
-    else:
-        pipei2.at[i, '问题工单'] = '否'
     i = i + 1
 
 i = 0
@@ -180,16 +235,14 @@ for j in pipei3.itertuples():
     b = oper_time - apply_time
     if abs(a.total_seconds()) < 300:
         pipei3.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+        pipei3.at[i, '问题工单'] = '是'
     else:
         pipei3.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '否'
+        pipei3.at[i, '问题工单'] = '否'
     if abs(b.total_seconds()) < 300:
         pipei3.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
     else:
         pipei3.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-    if abs(a.total_seconds()) < 300:
-        pipei3.at[i, '问题工单'] = '是'
-    else:
-        pipei3.at[i, '问题工单'] = '否'
     i = i + 1
 
 i = 0
@@ -201,16 +254,14 @@ for j in pipei4.itertuples():
     b = oper_time - apply_time
     if abs(a.total_seconds()) < 300:
         pipei4.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+        pipei4.at[i, '问题工单'] = '是'
     else:
         pipei4.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '否'
+        pipei4.at[i, '问题工单'] = '否'
     if abs(b.total_seconds()) < 300:
         pipei4.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
     else:
         pipei4.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-    if abs(a.total_seconds()) < 300:
-        pipei4.at[i, '问题工单'] = '是'
-    else:
-        pipei4.at[i, '问题工单'] = '否'
     i = i + 1
 
 order_1 = [
@@ -322,32 +373,24 @@ writer = pd.ExcelWriter('工单核查.xlsx')
 
 if not pipei1.empty:
     pipei1 = pipei1[pipei1['问题工单'].isin(['是'])]
-    pipei1['预处理意见'] = pipei1['预处理意见'].apply(str)
-    pipei1 = pipei1.loc[pipei1['预处理意见'].str.contains('对端')]
     pipei1 = pipei1[order_1]
     pipei1 = pipei1.drop_duplicates()
     pipei1.to_excel(writer, "华为-主单", index=None)
 
 if not pipei2.empty:
     pipei2 = pipei2[pipei2['问题工单'].isin(['是'])]
-    pipei2['预处理意见'] = pipei2['预处理意见'].apply(str)
-    pipei2 = pipei2.loc[pipei2['预处理意见'].str.contains('对端')]
     pipei2 = pipei2[order_2]
     pipei2 = pipei2.drop_duplicates()
     pipei2.to_excel(writer, "中兴-子单", index=None)
 
 if not pipei3.empty:
     pipei3 = pipei3[pipei3['问题工单'].isin(['是'])]
-    pipei3['预处理意见'] = pipei3['预处理意见'].apply(str)
-    pipei3 = pipei3.loc[pipei3['预处理意见'].str.contains('对端')]
     pipei3 = pipei3[order_3]
     pipei3 = pipei3.drop_duplicates()
     pipei3.to_excel(writer, "华为-子单", index=None)
 
 if not pipei4.empty:
     pipei4 = pipei4[pipei4['问题工单'].isin(['是'])]
-    pipei4['预处理意见'] = pipei4['预处理意见'].apply(str)
-    pipei4 = pipei4.loc[pipei4['预处理意见'].str.contains('对端')]
     pipei4 = pipei4[order_4]
     pipei4 = pipei4.drop_duplicates()
     pipei4.to_excel(writer, "中兴-子单", index=None)
