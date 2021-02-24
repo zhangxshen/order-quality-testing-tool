@@ -12,8 +12,6 @@ huawei = huawei.dropna(axis=0, subset=["操作对象"])
 
 zte = pd.read_excel(
     path_target,
-    usecols=[
-        '命令功能', '操作', '用户名称', '操作结束时间', '操作对象', '详细信息'],
     sheet_name='中兴网管日志')
 zte = zte.dropna(axis=0, subset=["操作对象"])
 if zte.columns.values[0] == '用户名称':
@@ -63,37 +61,15 @@ def zte_sens_oper(x):
 huawei.loc[:, "是否敏感操作"] = huawei.apply(hw_sens_oper, axis=1)
 zte.loc[:, "是否敏感操作"] = zte.apply(zte_sens_oper, axis=1)
 
-for col in huawei.columns:
-    num_unique_values = len(huawei[col].unique())
-    num_total_values = len(huawei[col])
-    if num_unique_values / num_total_values < 0.5:
-        huawei.loc[:, col] = huawei[col].astype('category')
-    else:
-        huawei.loc[:, col] = huawei[col]
-
-for col in zte.columns:
-    num_unique_values = len(zte[col].unique())
-    num_total_values = len(zte[col])
-    if num_unique_values / num_total_values < 0.5:
-        zte.loc[:, col] = zte[col].astype('category')
-    else:
-        zte.loc[:, col] = zte[col]
-
-for col in father_order.columns:
-    num_unique_values = len(father_order[col].unique())
-    num_total_values = len(father_order[col])
-    if num_unique_values / num_total_values < 0.5:
-        father_order.loc[:, col] = father_order[col].astype('category')
-    else:
-        father_order.loc[:, col] = father_order[col]
-
-for col in son_order.columns:
-    num_unique_values = len(son_order[col].unique())
-    num_total_values = len(son_order[col])
-    if num_unique_values / num_total_values < 0.5:
-        son_order.loc[:, col] = son_order[col].astype('category')
-    else:
-        son_order.loc[:, col] = son_order[col]
+for a in [huawei, zte, father_order, son_order]:
+    for col in a.columns:
+        num_unique_values = len(a[col].unique())
+        num_total_values = len(a[col])
+        if num_unique_values != 0 and num_total_values != 0:
+            if num_unique_values / num_total_values < 0.5:
+                a.loc[:, col] = a[col].astype('category')
+            else:
+                a.loc[:, col] = a[col]
 
 huawei.loc[:, '操作对象'] = huawei['操作对象'].astype('category')
 zte.loc[:, '操作对象'] = zte['操作对象'].astype('category')
