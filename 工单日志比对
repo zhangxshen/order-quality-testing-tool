@@ -36,10 +36,8 @@ son_order = pd.read_excel(
     sheet_name='工单子告警导出')
 son_order = son_order.dropna(axis=0, subset=["子告警网元名称"])
 
-huawei = huawei.drop_duplicates()
-zte = zte.drop_duplicates()
-father_order = father_order.drop_duplicates()
-son_order = son_order.drop_duplicates()
+for a in [huawei, zte, father_order, son_order]:
+    a = a.drop_duplicates()
 
 # 去掉日期字段可能存在的空格字符串
 huawei['时间'] = huawei['时间'].map(str.strip)
