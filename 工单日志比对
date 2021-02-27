@@ -4,6 +4,7 @@ import pandas as pd
 path_target = input("请输入文件路径： ")
 print("正在进行网管日志与工单对比，请稍候……")
 
+# 读取源文件，并把操作对象和网元名称为空的数据去掉
 huawei = pd.read_excel(
     path_target,
     usecols=['操作名称', '操作用户', '时间', '操作对象', '详细信息'],
@@ -25,6 +26,7 @@ father_order = pd.read_excel(
              '故障发现时间', '申请报结操作时间', '预处理意见'],
     sheet_name='主单')
 father_order['预处理意见'] = father_order['预处理意见'].apply(str)
+# 只保留群路口工单
 father_order = father_order.loc[father_order['预处理意见'].str.contains('对端')]
 father_order = father_order.dropna(axis=0, subset=["网元名称"])
 
@@ -36,16 +38,19 @@ son_order = pd.read_excel(
     sheet_name='工单子告警导出')
 son_order = son_order.dropna(axis=0, subset=["子告警网元名称"])
 
+# 再做一个去重
 for a in [huawei, zte, father_order, son_order]:
     a = a.drop_duplicates()
 
 # 去掉日期字段可能存在的空格字符串
 huawei['时间'] = huawei['时间'].map(str.strip)
 
+# 敏感操作列表
 sens_oper = ['告警清除', '设置全网告警预投入', '设置告警预投入', '告警反转', '设置物理端口的属性',
              '设置网元的备用网关', '设置网元的主用网关', '修改网元', '设置']
 
 
+# 先将两个日志表加上“是否敏感操作”列
 def hw_sens_oper(x):
     if x["操作名称"] in sens_oper:
         return '是'
@@ -59,6 +64,7 @@ def zte_sens_oper(x):
 huawei.loc[:, "是否敏感操作"] = huawei.apply(hw_sens_oper, axis=1)
 zte.loc[:, "是否敏感操作"] = zte.apply(zte_sens_oper, axis=1)
 
+# 通过调整字段数据类型节省内存
 for a in [huawei, zte, father_order, son_order]:
     for col in a.columns:
         num_unique_values = len(a[col].unique())
@@ -69,33 +75,25 @@ for a in [huawei, zte, father_order, son_order]:
             else:
                 a.loc[:, col] = a[col]
 
+# 为了能merge匹配，网元名称和操作对象必须是同个数据类型
 huawei.loc[:, '操作对象'] = huawei['操作对象'].astype('category')
 zte.loc[:, '操作对象'] = zte['操作对象'].astype('category')
 
-pipei1 = pd.merge(huawei.loc[:, [
-    '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
-    father_order.loc[:, [
-        '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
-        '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-        '故障发现时间', '申请报结操作时间', '预处理意见'
-    ]],
-    left_on='操作对象',
-    right_on='网元名称')
+pipei1 = pd.merge(huawei,
+                  father_order,
+                  left_on='操作对象',
+                  right_on='网元名称')
 
 pipei2 = pd.merge(zte.loc[:, [
     '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-    father_order.loc[:, [
-        '工单编号', '故障发生地市', '网管告警消除时间', '网元名称', '告警对象', '告警标准名',
-        '业务状态', '自动审核业务状态', '业务影响分类标签', '网络分类二级', '网络分类三级', '故障发生时间',
-        '故障发现时间', '申请报结操作时间', '预处理意见']],
+    father_order.loc,
     left_on='操作对象',
     right_on='网元名称')
 
-pipei3 = pd.merge(huawei.loc[:, [
-    '操作名称', '是否敏感操作', '操作用户', '时间', '操作对象', '详细信息']],
-    son_order,
-    left_on='操作对象',
-    right_on='子告警网元名称')
+pipei3 = pd.merge(huawei,
+                  son_order,
+                  left_on='操作对象',
+                  right_on='子告警网元名称')
 
 pipei3 = pd.merge(pipei3,
                   father_order.loc[:,
