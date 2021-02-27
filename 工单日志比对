@@ -86,7 +86,7 @@ pipei1 = pd.merge(huawei,
 
 pipei2 = pd.merge(zte.loc[:, [
     '操作', '是否敏感操作', '用户名称', '操作结束时间', '操作对象', '详细信息']],
-    father_order.loc,
+    father_order,
     left_on='操作对象',
     right_on='网元名称')
 
@@ -142,6 +142,11 @@ for col in ['时间', '子告警消除时间', '申请报结操作时间']:
 
 for col in ['操作结束时间', '子告警消除时间', '申请报结操作时间']:
     pipei4[col] = pd.to_datetime(pipei4[col], errors='coerce')
+
+pipei5 = pipei1
+pipei6 = pipei2
+pipei7 = pipei3
+pipei8 = pipei4
 
 i = 0
 for j in pipei1.itertuples():
@@ -218,6 +223,30 @@ for j in pipei4.itertuples():
     else:
         pipei4.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
     i = i + 1
+
+i = 0
+for df in [pipei5, pipei7]:
+    for j in df.itertuples():
+        oper_time = getattr(j, '时间')
+        dis_time = getattr(j, '故障发生时间')
+        a = dis_time - oper_time
+        if 0 < a.total_seconds() < 300:
+            df.at[i, '疑似制造工单'] = '是'
+        else:
+            df.at[i, '疑似制造工单'] = '否'
+        i = i + 1
+
+i = 0
+for df in [pipei6, pipei8]:
+    for j in df.itertuples():
+        oper_time = getattr(j, '操作结束时间')
+        dis_time = getattr(j, '故障发生时间')
+        a = dis_time - oper_time
+        if 0 < a.total_seconds() < 300:
+            df.at[i, '疑似制造工单'] = '是'
+        else:
+            df.at[i, '疑似制造工单'] = '否'
+        i = i + 1
 
 order_1 = [
     '操作名称',
@@ -323,7 +352,104 @@ order_4 = [
     '网管操作时间与申请报结时间相差小于五分钟',
     '预处理意见']
 
+order_5 = [
+    '操作名称',
+    '是否敏感操作',
+    '操作用户',
+    '时间',
+    '操作对象',
+    '详细信息',
+    '工单编号',
+    '疑似制造工单',
+    '故障发生地市',
+    '网管告警消除时间',
+    '网元名称',
+    '告警对象',
+    '告警标准名',
+    '业务状态',
+    '自动审核业务状态',
+    '业务影响分类标签',
+    '网络分类二级',
+    '网络分类三级',
+    '故障发生时间',
+    '故障发现时间',
+    '申请报结操作时间',
+    '预处理意见']
+
+order_6 = [
+    '操作',
+    '是否敏感操作',
+    '用户名称',
+    '操作结束时间',
+    '操作对象',
+    '详细信息',
+    '工单编号',
+    '疑似制造工单',
+    '故障发生地市',
+    '网管告警消除时间',
+    '网元名称',
+    '告警对象',
+    '告警标准名',
+    '业务状态',
+    '自动审核业务状态',
+    '业务影响分类标签',
+    '网络分类二级',
+    '网络分类三级',
+    '故障发生时间',
+    '故障发现时间',
+    '申请报结操作时间',
+    '预处理意见']
+
+order_7 = [
+    '操作名称',
+    '是否敏感操作',
+    '操作用户',
+    '时间',
+    '操作对象',
+    '详细信息',
+    '工单编号',
+    '疑似制造工单',
+    '故障发生地市',
+    '子告警消除时间',
+    '子告警网元名称',
+    '子告警定位对象',
+    '子告警标准名',
+    '子告警业务状态',
+    '自动审核业务状态',
+    '业务影响分类标签',
+    '网络分类二级',
+    '网络分类三级',
+    '故障发生时间',
+    '故障发现时间',
+    '申请报结操作时间',
+    '预处理意见']
+
+order_8 = [
+    '操作',
+    '是否敏感操作',
+    '用户名称',
+    '操作结束时间',
+    '操作对象',
+    '详细信息',
+    '工单编号',
+    '疑似制造工单',
+    '故障发生地市',
+    '子告警消除时间',
+    '子告警网元名称',
+    '子告警定位对象',
+    '子告警标准名',
+    '子告警业务状态',
+    '自动审核业务状态',
+    '业务影响分类标签',
+    '网络分类二级',
+    '网络分类三级',
+    '故障发生时间',
+    '故障发现时间',
+    '申请报结操作时间',
+    '预处理意见']
+
 writer = pd.ExcelWriter('工单核查.xlsx')
+writer2 = pd.ExcelWriter('疑似制造工单核查.xlsx')
 
 
 if not pipei1.empty:
@@ -350,7 +476,32 @@ if not pipei4.empty:
     pipei4 = pipei4.drop_duplicates()
     pipei4.to_excel(writer, "中兴-子单", index=None)
 
+if not pipei5.empty:
+    pipei5 = pipei5[pipei5['疑似制造工单'].isin(['是'])]
+    pipei5 = pipei5[order_5]
+    pipei5 = pipei5.drop_duplicates()
+    pipei5.to_excel(writer2, "华为-主单", index=None)
+
+if not pipei6.empty:
+    pipei6 = pipei6[pipei6['疑似制造工单'].isin(['是'])]
+    pipei6 = pipei6[order_6]
+    pipei6 = pipei6.drop_duplicates()
+    pipei6.to_excel(writer2, "中兴-主单", index=None)
+
+if not pipei7.empty:
+    pipei7 = pipei7[pipei7['疑似制造工单'].isin(['是'])]
+    pipei7 = pipei7[order_7]
+    pipei7 = pipei7.drop_duplicates()
+    pipei7.to_excel(writer2, "华为-子单", index=None)
+
+if not pipei8.empty:
+    pipei8 = pipei8[pipei8['疑似制造工单'].isin(['是'])]
+    pipei8 = pipei8[order_8]
+    pipei8 = pipei8.drop_duplicates()
+    pipei8.to_excel(writer2, "中兴-子单", index=None)
+
 writer.save()
+writer2.save()
 
 print("比对完成！输出文件保存在程序相同路径下")
 input("请按任意键退出程序")
