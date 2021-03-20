@@ -1,8 +1,10 @@
 import pandas as pd
+import time
 
 
 def main():
     path_target = input("请输入文件路径:")
+    starttime = time.localtime()
 
     # 读取源文件，并把操作对象和网元名称为空的数据去掉
     huawei = pd.read_excel(
@@ -188,179 +190,67 @@ def main():
     u_f2 = u_f
     u_s2 = u_s
 
-    i = 0
-    for j in h_f.itertuples():
-        oper_time = getattr(j, '时间')
-        dis_time = getattr(j, '网管告警消除时间')
-        apply_time = getattr(j, '申请报结操作时间')
-        a = oper_time - dis_time
-        b = oper_time - apply_time
-        if abs(a.total_seconds()) < 300:
-            h_f.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
-            h_f.at[i, '问题工单'] = '是'
-        else:
-            h_f.at[i, '问题工单'] = '否'
-        if abs(b.total_seconds()) < 300:
-            h_f.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
-        else:
-            h_f.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-        i = i + 1
+    for h in [h_f, h_s]:
+        i = 0
+        for j in h.itertuples():
+            oper_time = getattr(j, '时间')
+            dis_time = getattr(j, '网管告警消除时间')
+            apply_time = getattr(j, '申请报结操作时间')
+            a = oper_time - dis_time
+            b = oper_time - apply_time
+            if abs(a.total_seconds()) < 300:
+                h.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+                h.at[i, '问题工单'] = '是'
+            else:
+                h.at[i, '问题工单'] = '否'
+            if abs(b.total_seconds()) < 300:
+                h.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
+            else:
+                h.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
+            i = i + 1
 
-    i = 0
-    for j in h_s.itertuples():
-        oper_time = getattr(j, '时间')
-        dis_time = getattr(j, '网管告警消除时间')
-        apply_time = getattr(j, '申请报结操作时间')
-        a = oper_time - dis_time
-        b = oper_time - apply_time
-        if abs(a.total_seconds()) < 300:
-            h_s.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
-            h_s.at[i, '问题工单'] = '是'
-        else:
-            h_s.at[i, '问题工单'] = '否'
-        if abs(b.total_seconds()) < 300:
-            h_s.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
-        else:
-            h_s.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-        i = i + 1
+    for z in [z_f, z_s, u_f, u_s]:
+        i = 0
+        for j in z.itertuples():
+            oper_time = getattr(j, '操作结束时间')
+            dis_time = getattr(j, '网管告警消除时间')
+            apply_time = getattr(j, '申请报结操作时间')
+            a = oper_time - dis_time
+            b = oper_time - apply_time
+            if abs(a.total_seconds()) < 300:
+                z.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+                z.at[i, '问题工单'] = '是'
+            else:
+                z.at[i, '问题工单'] = '否'
+            if abs(b.total_seconds()) < 300:
+                z.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
+            else:
+                z.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
+            i = i + 1
 
-    i = 0
-    for j in z_f.itertuples():
-        oper_time = getattr(j, '操作结束时间')
-        dis_time = getattr(j, '网管告警消除时间')
-        apply_time = getattr(j, '申请报结操作时间')
-        a = oper_time - dis_time
-        b = oper_time - apply_time
-        if abs(a.total_seconds()) < 300:
-            z_f.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
-            z_f.at[i, '问题工单'] = '是'
-        else:
-            z_f.at[i, '问题工单'] = '否'
-        if abs(b.total_seconds()) < 300:
-            z_f.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
-        else:
-            z_f.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-        i = i + 1
+    for h in [h_f2, h_s2]:
+        i = 0
+        for j in h.itertuples():
+            oper_time = getattr(j, '时间')
+            dis_time = getattr(j, '故障发生时间')
+            a = dis_time - oper_time
+            if 0 < a.total_seconds() < 300:
+                h.at[i, '疑似制造工单'] = '是'
+            else:
+                h.at[i, '疑似制造工单'] = '否'
+            i = i + 1
 
-    i = 0
-    for j in z_s.itertuples():
-        oper_time = getattr(j, '操作结束时间')
-        dis_time = getattr(j, '网管告警消除时间')
-        apply_time = getattr(j, '申请报结操作时间')
-        a = oper_time - dis_time
-        b = oper_time - apply_time
-        if abs(a.total_seconds()) < 300:
-            z_s.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
-            z_s.at[i, '问题工单'] = '是'
-        else:
-            z_s.at[i, '问题工单'] = '否'
-        if abs(b.total_seconds()) < 300:
-            z_s.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
-        else:
-            z_s.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-        i = i + 1
-
-    i = 0
-    for j in u_f.itertuples():
-        oper_time = getattr(j, '操作结束时间')
-        dis_time = getattr(j, '网管告警消除时间')
-        apply_time = getattr(j, '申请报结操作时间')
-        a = oper_time - dis_time
-        b = oper_time - apply_time
-        if abs(a.total_seconds()) < 300:
-            u_f.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
-            u_f.at[i, '问题工单'] = '是'
-        else:
-            u_f.at[i, '问题工单'] = '否'
-        if abs(b.total_seconds()) < 300:
-            u_f.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
-        else:
-            u_f.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-        i = i + 1
-
-    i = 0
-    for j in u_s.itertuples():
-        oper_time = getattr(j, '操作结束时间')
-        dis_time = getattr(j, '网管告警消除时间')
-        apply_time = getattr(j, '申请报结操作时间')
-        a = oper_time - dis_time
-        b = oper_time - apply_time
-        if abs(a.total_seconds()) < 300:
-            u_s.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
-            u_s.at[i, '问题工单'] = '是'
-        else:
-            u_s.at[i, '问题工单'] = '否'
-        if abs(b.total_seconds()) < 300:
-            u_s.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
-        else:
-            u_s.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
-        i = i + 1
-
-    i = 0
-    for j in h_f2.itertuples():
-        oper_time = getattr(j, '时间')
-        dis_time = getattr(j, '故障发生时间')
-        a = dis_time - oper_time
-        if 0 < a.total_seconds() < 300:
-            h_f2.at[i, '疑似制造工单'] = '是'
-        else:
-            h_f2.at[i, '疑似制造工单'] = '否'
-        i = i + 1
-
-    i = 0
-    for j in h_s2.itertuples():
-        oper_time = getattr(j, '时间')
-        dis_time = getattr(j, '故障发生时间')
-        a = dis_time - oper_time
-        if 0 < a.total_seconds() < 300:
-            h_s2.at[i, '疑似制造工单'] = '是'
-        else:
-            h_s2.at[i, '疑似制造工单'] = '否'
-        i = i + 1
-
-    i = 0
-    for j in z_f2.itertuples():
-        oper_time = getattr(j, '操作结束时间')
-        dis_time = getattr(j, '故障发生时间')
-        a = dis_time - oper_time
-        if 0 < a.total_seconds() < 300:
-            z_f2.at[i, '疑似制造工单'] = '是'
-        else:
-            z_f2.at[i, '疑似制造工单'] = '否'
-        i = i + 1
-
-    i = 0
-    for j in z_s2.itertuples():
-        oper_time = getattr(j, '操作结束时间')
-        dis_time = getattr(j, '故障发生时间')
-        a = dis_time - oper_time
-        if 0 < a.total_seconds() < 300:
-            z_s2.at[i, '疑似制造工单'] = '是'
-        else:
-            z_s2.at[i, '疑似制造工单'] = '否'
-        i = i + 1
-
-    i = 0
-    for j in u_f2.itertuples():
-        oper_time = getattr(j, '操作结束时间')
-        dis_time = getattr(j, '故障发生时间')
-        a = dis_time - oper_time
-        if 0 < a.total_seconds() < 300:
-            u_f2.at[i, '疑似制造工单'] = '是'
-        else:
-            u_f2.at[i, '疑似制造工单'] = '否'
-        i = i + 1
-
-    i = 0
-    for j in u_s2.itertuples():
-        oper_time = getattr(j, '操作结束时间')
-        dis_time = getattr(j, '故障发生时间')
-        a = dis_time - oper_time
-        if 0 < a.total_seconds() < 300:
-            u_s2.at[i, '疑似制造工单'] = '是'
-        else:
-            u_s2.at[i, '疑似制造工单'] = '否'
-        i = i + 1
+    for z in [z_f2, z_s2, u_f2, u_s2]:
+        i = 0
+        for j in z.itertuples():
+            oper_time = getattr(j, '操作结束时间')
+            dis_time = getattr(j, '故障发生时间')
+            a = dis_time - oper_time
+            if 0 < a.total_seconds() < 300:
+                z.at[i, '疑似制造工单'] = '是'
+            else:
+                z.at[i, '疑似制造工单'] = '否'
+            i = i + 1
 
     order_1 = [
         '操作名称',
