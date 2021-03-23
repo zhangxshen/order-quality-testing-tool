@@ -1,10 +1,10 @@
 import pandas as pd
-import time
+import datetime
 
 
 def main():
     path_target = input("请输入文件路径:")
-    starttime = time.localtime()
+    starttime = datetime.datetime.now()
 
     # 读取源文件，并把操作对象和网元名称为空的数据去掉
     huawei = pd.read_excel(
@@ -401,6 +401,8 @@ def main():
     writer.save()
     writer2.save()
     print("质检完成！输出的表格与程序在同一路径下。")
+    endtime = datetime.datetime.now()
+    print("程序总耗时：", (endtime - starttime))
     input("直接关闭程序即可。")
 
 
