@@ -4,6 +4,7 @@ import datetime
 
 def main():
     path_target = input("请输入文件路径:")
+    print("开始进行工单质检，请稍后……")
     starttime = datetime.datetime.now()
 
     # 读取源文件，并把操作对象和网元名称为空的数据去掉
@@ -18,6 +19,7 @@ def main():
         sheet_name='U31网管日志')
     zte = zte.dropna(axis=0, subset=["操作对象"])
     zte = zte.drop('操作', axis=1)
+
     zte = zte.rename(columns={'命令功能': '操作'})
 
     ume = pd.read_excel(
@@ -35,6 +37,8 @@ def main():
     # 只保留群路口工单
     father_order = father_order.loc[father_order['预处理意见'].str.contains('对端')]
     father_order = father_order.dropna(axis=0, subset=["网元名称"])
+    father_order = father_order.dropna(axis=0, subset=["业务影响分类标签"])
+    father_order = father_order.loc[father_order['业务影响分类标签'].str.contains('单边')]
 
     son_order = pd.read_excel(
         path_target,
@@ -198,15 +202,15 @@ def main():
             apply_time = getattr(j, '申请报结操作时间')
             a = oper_time - dis_time
             b = oper_time - apply_time
-            if abs(a.total_seconds()) < 300:
-                h.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+            if abs(a.total_seconds()) < 900:
+                h.at[i, '网管操作时间与告警消除时间相差小于15分钟'] = '是'
                 h.at[i, '问题工单'] = '是'
             else:
                 h.at[i, '问题工单'] = '否'
-            if abs(b.total_seconds()) < 300:
-                h.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
+            if abs(b.total_seconds()) < 900:
+                h.at[i, '网管操作时间与申请报结时间相差小于15分钟'] = '是'
             else:
-                h.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
+                h.at[i, '网管操作时间与申请报结时间相差小于15分钟'] = '否'
             i = i + 1
 
     for z in [z_f, z_s, u_f, u_s]:
@@ -217,15 +221,15 @@ def main():
             apply_time = getattr(j, '申请报结操作时间')
             a = oper_time - dis_time
             b = oper_time - apply_time
-            if abs(a.total_seconds()) < 300:
-                z.at[i, '网管操作时间与告警消除时间相差小于五分钟'] = '是'
+            if abs(a.total_seconds()) < 900:
+                z.at[i, '网管操作时间与告警消除时间相差小于15分钟'] = '是'
                 z.at[i, '问题工单'] = '是'
             else:
                 z.at[i, '问题工单'] = '否'
-            if abs(b.total_seconds()) < 300:
-                z.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '是'
+            if abs(b.total_seconds()) < 900:
+                z.at[i, '网管操作时间与申请报结时间相差小于15分钟'] = '是'
             else:
-                z.at[i, '网管操作时间与申请报结时间相差小于五分钟'] = '否'
+                z.at[i, '网管操作时间与申请报结时间相差小于15分钟'] = '否'
             i = i + 1
 
     for h in [h_f2, h_s2]:
@@ -274,8 +278,8 @@ def main():
         '故障发生时间',
         '故障发现时间',
         '申请报结操作时间',
-        '网管操作时间与告警消除时间相差小于五分钟',
-        '网管操作时间与申请报结时间相差小于五分钟',
+        '网管操作时间与告警消除时间相差小于15分钟',
+        '网管操作时间与申请报结时间相差小于15分钟',
         '预处理意见']
 
     order_2 = [
@@ -300,8 +304,8 @@ def main():
         '故障发生时间',
         '故障发现时间',
         '申请报结操作时间',
-        '网管操作时间与告警消除时间相差小于五分钟',
-        '网管操作时间与申请报结时间相差小于五分钟',
+        '网管操作时间与告警消除时间相差小于15分钟',
+        '网管操作时间与申请报结时间相差小于15分钟',
         '预处理意见']
 
     order_5 = [
@@ -363,19 +367,19 @@ def main():
     ume_result2 = pd.concat([u_f2, u_s2])
 
     if not hw_result.empty:
-        hw_result = hw_result[hw_result['问题工单'].isin(['是'])]
+        # hw_result = hw_result[hw_result['问题工单'].isin(['是'])]
         hw_result = hw_result[order_1]
         hw_result = hw_result.drop_duplicates()
         hw_result.to_excel(writer, "华为", index=None)
 
     if not zte_result.empty:
-        zte_result = zte_result[zte_result['问题工单'].isin(['是'])]
+        # zte_result = zte_result[zte_result['问题工单'].isin(['是'])]
         zte_result = zte_result[order_2]
         zte_result = zte_result.drop_duplicates()
         zte_result.to_excel(writer, "中兴U31", index=None)
 
     if not ume_result.empty:
-        ume_result = ume_result[ume_result['问题工单'].isin(['是'])]
+        # ume_result = ume_result[ume_result['问题工单'].isin(['是'])]
         ume_result = ume_result[order_2]
         ume_result = ume_result.drop_duplicates()
         ume_result.to_excel(writer, "中兴UME", index=None)
@@ -404,6 +408,5 @@ def main():
     endtime = datetime.datetime.now()
     print("程序总耗时：", (endtime - starttime))
     input("直接关闭程序即可。")
-
 
 main()
