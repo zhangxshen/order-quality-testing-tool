@@ -4,7 +4,7 @@ import datetime
 
 def main():
     path_target = input("请输入文件路径:")
-    print("开始进行工单质检，请稍后……")
+    print("开始进行工单质检，请稍候……")
     starttime = datetime.datetime.now()
 
     # 读取源文件，并把操作对象和网元名称为空的数据去掉
@@ -26,6 +26,7 @@ def main():
         path_target,
         sheet_name='UME网管日志')
     ume = ume.dropna(axis=0, subset=["操作对象"])
+    ume = ume.rename(columns={'操作名称': '操作'})
 
     father_order = pd.read_excel(
         path_target,
@@ -200,14 +201,14 @@ def main():
             oper_time = getattr(j, '时间')
             dis_time = getattr(j, '网管告警消除时间')
             apply_time = getattr(j, '申请报结操作时间')
-            a = oper_time - dis_time
-            b = oper_time - apply_time
-            if abs(a.total_seconds()) < 900:
+            a = dis_time - oper_time
+            b = apply_time - oper_time
+            if 0 < a.total_seconds() < 900:
                 h.at[i, '网管操作时间与告警消除时间相差小于15分钟'] = '是'
                 h.at[i, '问题工单'] = '是'
             else:
                 h.at[i, '问题工单'] = '否'
-            if abs(b.total_seconds()) < 900:
+            if 0 < b.total_seconds() < 900:
                 h.at[i, '网管操作时间与申请报结时间相差小于15分钟'] = '是'
             else:
                 h.at[i, '网管操作时间与申请报结时间相差小于15分钟'] = '否'
@@ -219,14 +220,14 @@ def main():
             oper_time = getattr(j, '操作结束时间')
             dis_time = getattr(j, '网管告警消除时间')
             apply_time = getattr(j, '申请报结操作时间')
-            a = oper_time - dis_time
-            b = oper_time - apply_time
-            if abs(a.total_seconds()) < 900:
+            a = dis_time - oper_time
+            b = apply_time - oper_time
+            if 0 < a.total_seconds() < 900:
                 z.at[i, '网管操作时间与告警消除时间相差小于15分钟'] = '是'
                 z.at[i, '问题工单'] = '是'
             else:
                 z.at[i, '问题工单'] = '否'
-            if abs(b.total_seconds()) < 900:
+            if 0 < b.total_seconds() < 900:
                 z.at[i, '网管操作时间与申请报结时间相差小于15分钟'] = '是'
             else:
                 z.at[i, '网管操作时间与申请报结时间相差小于15分钟'] = '否'
